@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	repeatRegexp = `[dywm]( (-?[0-9]+,)*-?[0-9])?( ([0-9]+,)*[0-9]+)?$`
+	repeatRegexp = `[dywm]( (-?[0-9]+,)*-?[0-9]+)?( ([0-9]+,)*[0-9]+)?$`
 )
 
 var (
@@ -68,7 +68,9 @@ func nextDateD(now time.Time, date time.Time, repeat string) (string, error) {
 	if days < 1 || days > 400 {
 		return "", errors.New("days count must be in range 1..400")
 	}
-	result := date
+
+	now = now.Truncate(24 * time.Hour)
+	result := date.Truncate(24 * time.Hour)
 	for {
 		result = result.AddDate(0, 0, days)
 		if result.After(now) {
@@ -83,7 +85,8 @@ func nextDateY(now time.Time, date time.Time, repeat string) (string, error) {
 		return "", errors.New("mismatch format of `y` repeat modifier")
 	}
 
-	result := date
+	now = now.Truncate(24 * time.Hour)
+	result := date.Truncate(24 * time.Hour)
 	for {
 		result = result.AddDate(1, 0, 0)
 		if result.After(now) {
@@ -112,7 +115,9 @@ func nextDateW(now time.Time, date time.Time, repeat string) (string, error) {
 		}
 		requiredDays = append(requiredDays, weekday)
 	}
-	result := date
+
+	now = now.Truncate(24 * time.Hour)
+	result := date.Truncate(24 * time.Hour)
 	for {
 		result = result.AddDate(0, 0, 1)
 		if slices.Contains(requiredDays, result.Weekday()) && result.After(now) {
@@ -144,7 +149,8 @@ func nextDateM(now time.Time, date time.Time, repeat string) (string, error) {
 		}
 	}
 
-	result := date
+	now = now.Truncate(24 * time.Hour)
+	result := date.Truncate(24 * time.Hour)
 	for {
 		result = result.AddDate(0, 0, 1)
 		year, month, day := result.Date()

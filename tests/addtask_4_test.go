@@ -106,7 +106,7 @@ func TestAddTask(t *testing.T) {
 			"Ожидается ошибка для задачи %v", v)
 	}
 
-	now := time.Now()
+	now := time.Now().Truncate(24 * time.Hour).UTC()
 
 	check := func() {
 		for _, v := range tbl {

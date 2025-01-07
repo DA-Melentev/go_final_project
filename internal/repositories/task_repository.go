@@ -121,8 +121,28 @@ func (r *TaskRepository) GetTasksByDate(date string) ([]models.Task, error) {
 	return tasks, nil
 }
 
+func (r *TaskRepository) DeleteTask(id int) error {
+	query := "DELETE FROM scheduler WHERE id = ?"
+
+	res, err := r.db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	c, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if c == 0 {
+		return fmt.Errorf("task with id=%d not found", id)
+	}
+
+	return nil
+}
+
 func rowSetToTaskList(rows *sql.Rows) ([]models.Task, error) {
-	var tasks []models.Task
+	tasks := make([]models.Task, 0)
 	for rows.Next() {
 		var task models.Task
 		err := rows.Scan(&task.Id, &task.Date, &task.Title, &task.Comment, &task.Repeat)

@@ -3,6 +3,7 @@ package services
 import (
 	"github.com/DA-Melentev/go_final_project/internal/models"
 	"github.com/DA-Melentev/go_final_project/internal/repositories"
+	"github.com/DA-Melentev/go_final_project/internal/utils"
 	"time"
 )
 
@@ -26,6 +27,39 @@ func (s *TaskService) PutTask(task models.Task) error {
 
 func (s *TaskService) GetTaskById(id int) (models.Task, error) {
 	return s.repo.GetTaskById(id)
+}
+
+func (s *TaskService) TaskDone(id int) error {
+	task, err := s.repo.GetTaskById(id)
+	if err != nil {
+		return err
+	}
+
+	if len(task.Repeat) == 0 {
+		err := s.repo.DeleteTask(id)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	nextDate, err := utils.NextDate(time.Now(), task.Date, task.Repeat)
+	if err != nil {
+		return err
+	}
+
+	task.Date = nextDate
+
+	err = s.repo.PutTask(task)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *TaskService) TaskDelete(id int) error {
+	return s.repo.DeleteTask(id)
 }
 
 func (s *TaskService) GetAllTasks() ([]models.Task, error) {

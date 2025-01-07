@@ -4,6 +4,7 @@ go 1.23rc2
 
 require (
 	github.com/go-chi/chi/v5 v5.2.0
+	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/stretchr/testify v1.10.0

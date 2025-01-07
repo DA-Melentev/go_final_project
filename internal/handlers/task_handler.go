@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/DA-Melentev/go_final_project/internal/models"
 	"github.com/DA-Melentev/go_final_project/internal/services"
-	"github.com/DA-Melentev/go_final_project/utils"
+	"github.com/DA-Melentev/go_final_project/internal/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -64,7 +64,7 @@ func (h *TaskHandler) AddTask(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("/api/task POST: %v", task)
 
-	status, err := validTask(task)
+	status, err := validTask(&task)
 	if err != nil {
 		WriteError(w, status, err)
 		log.Printf("error: %v", err)
@@ -93,7 +93,7 @@ func (h *TaskHandler) PutTask(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("/api/task PUT: %v", task)
 
-	status, err := validTask(task)
+	status, err := validTask(&task)
 	if err != nil {
 		WriteError(w, status, err)
 		log.Printf("error: %v", err)
@@ -113,31 +113,66 @@ func (h *TaskHandler) PutTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteResponseJSON(w, http.StatusCreated, "")
+	WriteResponseJSON(w, http.StatusCreated, map[string]interface{}{})
 }
 
 func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("id")
-	if len(idStr) == 0 {
-		WriteError(w, http.StatusBadRequest, errors.New("id param is required"))
+	id, err := extractId(r)
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, err)
+		log.Printf("error: %v", err)
 		return
 	}
 
-	id, err := strconv.ParseInt(idStr, 10, 32)
-	if len(idStr) == 0 {
-		WriteError(w, http.StatusBadRequest, errors.New("wrong id param"))
-		return
-	}
+	log.Printf("/api/task GET ?id=%d", id)
 
-	log.Printf("/api/tasks GET ?id=%d", id)
-
-	result, err := h.Service.GetTaskById(int(id))
+	result, err := h.Service.GetTaskById(id)
 	if err != nil {
 		WriteError(w, http.StatusNotFound, err)
 		return
 	}
 
 	WriteResponseJSON(w, http.StatusOK, result)
+}
+
+func (h *TaskHandler) TaskDone(w http.ResponseWriter, r *http.Request) {
+	id, err := extractId(r)
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, err)
+		log.Printf("error: %v", err)
+		return
+	}
+
+	log.Printf("/api/task/done POST ?id=%d", id)
+
+	err = h.Service.TaskDone(id)
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, err)
+		log.Printf("error: %v", err)
+		return
+	}
+
+	WriteResponseJSON(w, http.StatusAccepted, map[string]interface{}{})
+}
+
+func (h *TaskHandler) TaskDelete(w http.ResponseWriter, r *http.Request) {
+	id, err := extractId(r)
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, err)
+		log.Printf("error: %v", err)
+		return
+	}
+
+	log.Printf("/api/task/done DELETE ?id=%d", id)
+
+	err = h.Service.TaskDelete(id)
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, err)
+		log.Printf("error: %v", err)
+		return
+	}
+
+	WriteResponseJSON(w, http.StatusAccepted, map[string]interface{}{})
 }
 
 func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
@@ -175,10 +210,9 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func validTask(task models.Task) (int, error) {
+func validTask(task *models.Task) (int, error) {
 	if len(task.Title) == 0 {
 		err := errors.New("title field is required")
-		log.Printf("error: title field is required")
 		return http.StatusBadRequest, err
 	}
 
@@ -187,31 +221,46 @@ func validTask(task models.Task) (int, error) {
 		err  error
 	)
 	if len(task.Date) == 0 {
-		task.Date = time.Now().Format("20060102")
+		date = time.Now().Truncate(24 * time.Hour).UTC()
+		task.Date = date.Format("20060102")
 	} else {
 		date, err = time.Parse("20060102", task.Date)
 		if err != nil {
-			log.Printf("error: wrong date format")
 			return http.StatusBadRequest, fmt.Errorf("wrong date format: %v", err)
 		}
 	}
 
 	var nextDate string
 	if len(task.Repeat) > 0 {
-		nextDate, err = utils.NextDate(time.Now(), task.Date, task.Repeat)
+		nextDate, err = utils.NextDate(time.Now().Truncate(24*time.Hour).UTC(), task.Date, task.Repeat)
 		if err != nil {
-			log.Printf("error while calculating nextdate: %v", err)
 			return http.StatusBadRequest, err
 		}
 	}
 
-	if date.Before(time.Now()) {
+	now := time.Now().Truncate(24 * time.Hour).UTC()
+	date = date.Truncate(24 * time.Hour)
+
+	if date.Before(now) {
 		if len(task.Repeat) > 0 {
 			task.Date = nextDate
 		} else {
-			task.Date = time.Now().Format("20060102")
+			task.Date = time.Now().Truncate(24 * time.Hour).UTC().Format("20060102")
 		}
 	}
 
 	return 0, nil
+}
+
+func extractId(r *http.Request) (int, error) {
+	idStr := r.URL.Query().Get("id")
+	if len(idStr) == 0 {
+		return 0, errors.New("id param not specified")
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		return 0, errors.New("wrong id param")
+	}
+	return int(id), nil
 }

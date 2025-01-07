@@ -76,13 +76,24 @@ func getRouter() *chi.Mux {
 
 	webDir := "web"
 	r.Handle("/*", http.FileServer(http.Dir(webDir)))
+
 	r.Get("/api/nextdate", taskHandler.NextDate)
+	r.Post("/api/signin", handlers.SignIn)
 
-	r.Post("/api/task", taskHandler.AddTask)
-	r.Get("/api/task", taskHandler.GetTask)
-	r.Put("/api/task", taskHandler.PutTask)
+	r.Route("/api/task", func(r chi.Router) {
+		r.Use(handlers.Auth)
+		r.Get("/", taskHandler.GetTask)
+		r.Post("/", taskHandler.AddTask)
+		r.Put("/", taskHandler.PutTask)
+		r.Delete("/", taskHandler.TaskDelete)
 
-	r.Get("/api/tasks", taskHandler.GetTasks)
+		r.Post("/done", taskHandler.TaskDone)
+	})
+
+	r.Route("/api/tasks", func(r chi.Router) {
+		r.Use(handlers.Auth)
+		r.Get("/", taskHandler.GetTasks)
+	})
 
 	return r
 }
