@@ -1,15 +1,19 @@
 package main
 
 import (
-	"fmt"
 	"github.com/DA-Melentev/go_final_project/config"
-	db2 "github.com/DA-Melentev/go_final_project/internal/db"
+	"github.com/DA-Melentev/go_final_project/db"
 	"github.com/DA-Melentev/go_final_project/internal/handlers"
+	"github.com/DA-Melentev/go_final_project/internal/repositories"
 	"github.com/DA-Melentev/go_final_project/internal/services"
 	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
 	"os"
+)
+
+var (
+	taskHandler *handlers.TaskHandler
 )
 
 func main() {
@@ -29,18 +33,18 @@ func initDb() error {
 	if len(dbPath) == 0 {
 		dbPath = config.DbFile
 	}
-	dbIsInstall, err := db2.IsDbFileExists(dbPath)
+	dbIsInstall, err := db.IsDbFileExists(dbPath)
 	if err != nil {
 		return err
 	}
 
-	if err := db2.Connect(dbPath); err != nil {
+	if err := db.Connect(dbPath); err != nil {
 		return err
 	}
 
 	if !dbIsInstall {
 		log.Println("Database is not initialized. Run migration...")
-		if err := db2.RunMigration(); err != nil {
+		if err := db.RunMigration(); err != nil {
 			return err
 		}
 	}
@@ -54,19 +58,31 @@ func startListening() error {
 		port = config.Port
 	}
 
-	taskService := services.NewTaskService()
-	taskHandler := handlers.NewTaskHandler(taskService)
+	taskRepo := repositories.NewTaskRepository(db.DB)
+	taskService := services.NewTaskService(taskRepo)
+	taskHandler = handlers.NewTaskHandler(taskService)
 
+	r := getRouter()
+
+	log.Printf("Start listening on %s", "localhost:"+config.Port)
+	if err := http.ListenAndServe(":"+port, r); err != nil {
+		return err
+	}
+	return nil
+}
+
+func getRouter() *chi.Mux {
 	r := chi.NewRouter()
 
 	webDir := "web"
 	r.Handle("/*", http.FileServer(http.Dir(webDir)))
 	r.Get("/api/nextdate", taskHandler.NextDate)
 
-	log.Printf("Start listening on %s", "localhost:"+config.Port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
-		fmt.Println("Unable to load server: ", err)
-		return err
-	}
-	return nil
+	r.Post("/api/task", taskHandler.AddTask)
+	r.Get("/api/task", taskHandler.GetTask)
+	r.Put("/api/task", taskHandler.PutTask)
+
+	r.Get("/api/tasks", taskHandler.GetTasks)
+
+	return r
 }

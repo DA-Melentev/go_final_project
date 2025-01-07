@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"os"
-	"path/filepath"
 
 	_ "modernc.org/sqlite"
 )
@@ -26,12 +25,7 @@ func Connect(databaseFile string) error {
 }
 
 func IsDbFileExists(databaseFile string) (bool, error) {
-	appPath, err := os.Executable()
-	if err != nil {
-		return false, err
-	}
-	dbFile := filepath.Join(filepath.Dir(appPath), databaseFile)
-	_, err = os.Stat(dbFile)
+	_, err := os.Stat(databaseFile)
 
 	exists := false
 	if err == nil {
