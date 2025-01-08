@@ -1,3 +1,4 @@
 /scheduler.db
 /.idea/
 /secret_key
+/.env

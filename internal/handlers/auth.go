@@ -71,6 +71,7 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+	log.Printf("New token generated: %s", token)
 	WriteResponseJSON(w, http.StatusAccepted, map[string]interface{}{
 		"token": token,
 	})
@@ -120,7 +121,6 @@ func validateJWT(tokenString string) bool {
 
 func getSecretPhrase() []byte {
 	pass := os.Getenv("TODO_PASSWORD")
-
 	hasher := sha256.New()
 	hasher.Write([]byte(pass))
 	return hasher.Sum(nil)

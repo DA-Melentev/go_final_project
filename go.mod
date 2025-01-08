@@ -1,6 +1,6 @@
 module github.com/DA-Melentev/go_final_project
 
-go 1.23rc2
+go 1.22
 
 require (
 	github.com/go-chi/chi/v5 v5.2.0

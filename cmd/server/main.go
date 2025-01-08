@@ -64,7 +64,7 @@ func startListening() error {
 
 	r := getRouter()
 
-	log.Printf("Start listening on %s", "localhost:"+config.Port)
+	log.Printf("Start listening on %s", "localhost:"+port)
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		return err
 	}
