@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"log"
 	"os"
 
 	_ "modernc.org/sqlite"
@@ -20,7 +19,6 @@ func Connect(databaseFile string) error {
 	if err = DB.Ping(); err != nil {
 		return err
 	}
-	log.Println("Connected to database")
 	return nil
 }
 

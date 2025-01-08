@@ -50,7 +50,7 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 
 	if len(password) == 0 {
 		err := errors.New("password field is required")
-		WriteError(w, http.StatusUnauthorized, err)
+		WriteError(w, http.StatusForbidden, err)
 		log.Printf("error while handling password: %v", err)
 		return
 	}
@@ -59,7 +59,7 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 
 	if password != correctPassword {
 		err := errors.New("wrong password")
-		WriteError(w, http.StatusUnauthorized, err)
+		WriteError(w, http.StatusForbidden, err)
 		log.Println(err)
 		return
 	}

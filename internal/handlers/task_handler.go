@@ -64,7 +64,7 @@ func (h *TaskHandler) AddTask(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("/api/task POST: %v", task)
 
-	status, err := validTask(&task)
+	status, err := handleTask(&task)
 	if err != nil {
 		WriteError(w, status, err)
 		log.Printf("error: %v", err)
@@ -93,7 +93,7 @@ func (h *TaskHandler) PutTask(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("/api/task PUT: %v", task)
 
-	status, err := validTask(&task)
+	status, err := handleTask(&task)
 	if err != nil {
 		WriteError(w, status, err)
 		log.Printf("error: %v", err)
@@ -172,7 +172,7 @@ func (h *TaskHandler) TaskDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteResponseJSON(w, http.StatusAccepted, map[string]interface{}{})
+	WriteResponseJSON(w, http.StatusOK, map[string]interface{}{})
 }
 
 func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
@@ -210,7 +210,7 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func validTask(task *models.Task) (int, error) {
+func handleTask(task *models.Task) (int, error) {
 	if len(task.Title) == 0 {
 		err := errors.New("title field is required")
 		return http.StatusBadRequest, err

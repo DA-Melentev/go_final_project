@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"github.com/DA-Melentev/go_final_project/config"
 	"github.com/DA-Melentev/go_final_project/db"
 	"github.com/DA-Melentev/go_final_project/internal/handlers"
@@ -10,6 +12,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 var (
@@ -18,14 +23,28 @@ var (
 
 func main() {
 	if err := initDb(); err != nil {
-		log.Fatal("Unable to load database: ", err)
+		log.Fatal("Failed to load database: ", err)
 		return
 	}
+	defer closeDatabase()
 
-	if err := startListening(); err != nil {
-		log.Fatal("Unable to load server: ", err)
-		return
+	mapDependencies()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	srv := startListening()
+
+	<-stop
+	log.Println("Shutdown signal received, stopping server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
 	}
+	log.Println("Server stopped gracefully")
 }
 
 func initDb() error {
@@ -41,6 +60,7 @@ func initDb() error {
 	if err := db.Connect(dbPath); err != nil {
 		return err
 	}
+	log.Println("Connected to database")
 
 	if !dbIsInstall {
 		log.Println("Database is not initialized. Run migration...")
@@ -52,23 +72,33 @@ func initDb() error {
 	return nil
 }
 
-func startListening() error {
+func startListening() *http.Server {
 	port := os.Getenv("TODO_PORT")
 	if len(port) == 0 {
 		port = config.Port
 	}
 
+	r := getRouter()
+
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
+	}
+
+	go func() {
+		log.Printf("Server is starting on %s", "localhost:"+port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	return srv
+}
+
+func mapDependencies() {
 	taskRepo := repositories.NewTaskRepository(db.DB)
 	taskService := services.NewTaskService(taskRepo)
 	taskHandler = handlers.NewTaskHandler(taskService)
-
-	r := getRouter()
-
-	log.Printf("Start listening on %s", "localhost:"+port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
-		return err
-	}
-	return nil
 }
 
 func getRouter() *chi.Mux {
@@ -96,4 +126,12 @@ func getRouter() *chi.Mux {
 	})
 
 	return r
+}
+
+func closeDatabase() {
+	if err := db.DB.Close(); err != nil {
+		log.Printf("Error closing database: %v", err)
+	} else {
+		log.Println("Database connection closed")
+	}
 }
