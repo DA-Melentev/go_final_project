@@ -49,7 +49,7 @@ ___
 Для запуска приложения с применением параметров из .env выполните
 
 #### Linux, MacOS:
-`env $(grep -v '^#' .env | xargs) go run main.go`
+`env $(grep -v '^#' .env | xargs) go run cmd/server/main.go`
 
 #### Windows (PowerShell):
 ```shell
