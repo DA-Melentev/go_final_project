@@ -23,7 +23,7 @@ func TestDone(t *testing.T) {
 	db := openDB(t)
 	defer db.Close()
 
-	now := time.Now()
+	now := time.Now().Truncate(24 * time.Hour).UTC()
 	id := addTask(t, task{
 		date:  now.Format(`20060102`),
 		title: "Свести баланс",
